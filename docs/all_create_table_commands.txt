@@ -31,6 +31,7 @@ CREATE TABLE CRICKETER (
 
 
 
+
 CREATE TABLE TRAINER (
     Trainer_id NUMBER(10),
     Specialization VARCHAR2(100),
