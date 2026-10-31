@@ -1,0 +1,246 @@
+CREATE TABLE USERS (
+    User_id NUMBER(10),
+    Name VARCHAR2(100) NOT NULL,
+    Password VARCHAR2(255) NOT NULL,
+    Role VARCHAR2(30) NOT NULL,
+    Phone VARCHAR2(15),
+    Address VARCHAR2(200),
+
+    CONSTRAINT PK_USERS
+        PRIMARY KEY (User_id)
+);
+
+
+
+CREATE TABLE CRICKETER (
+    Cricketer_id NUMBER(10),
+    DOB DATE,
+    Gender VARCHAR2(15),
+    Batting_Style VARCHAR2(30),
+    Bowling_Style VARCHAR2(30),
+    Experience NUMBER(3),
+    User_id NUMBER(10),
+
+    CONSTRAINT PK_CRICKETER
+        PRIMARY KEY (Cricketer_id),
+
+    CONSTRAINT FK_CRICKETER_USER
+        FOREIGN KEY (User_id)
+        REFERENCES USERS(User_id)
+);
+
+
+
+CREATE TABLE TRAINER (
+    Trainer_id NUMBER(10),
+    Specialization VARCHAR2(100),
+    Experience NUMBER(3),
+    Qualification VARCHAR2(100),
+    Salary NUMBER(10,2),
+    User_id NUMBER(10),
+
+    CONSTRAINT PK_TRAINER
+        PRIMARY KEY (Trainer_id),
+
+    CONSTRAINT FK_TRAINER_USER
+        FOREIGN KEY (User_id)
+        REFERENCES USERS(User_id)
+);
+
+
+
+CREATE TABLE CRICKET_PROGRAM (
+    Program_id NUMBER(10),
+    Program_name VARCHAR2(100) NOT NULL,
+    Duration VARCHAR2(50),
+
+    CONSTRAINT PK_CRICKET_PROGRAM
+        PRIMARY KEY (Program_id)
+);
+
+
+
+CREATE TABLE EQUIPMENT (
+    Equipment_id NUMBER(10),
+    Equipment_name VARCHAR2(100) NOT NULL,
+    Equipment_type VARCHAR2(50),
+    Total_Quantity NUMBER(10) NOT NULL,
+    Availability NUMBER(10) NOT NULL,
+    Quantity NUMBER(10),
+
+    CONSTRAINT PK_EQUIPMENT
+        PRIMARY KEY (Equipment_id),
+
+    CONSTRAINT CK_EQUIP_TOTAL
+        CHECK (Total_Quantity >= 0),
+
+    CONSTRAINT CK_EQUIP_AVAIL
+        CHECK (Availability >= 0 AND Availability <= Total_Quantity),
+
+    CONSTRAINT CK_EQUIP_QTY
+        CHECK (Quantity >= 0)
+);
+
+
+
+CREATE TABLE VENUE (
+    Venu_id NUMBER(10),
+    Venu_name VARCHAR2(100) NOT NULL,
+    Location VARCHAR2(200),
+    Capacity NUMBER(10),
+    Availability VARCHAR2(30),
+
+    CONSTRAINT PK_VENUE
+        PRIMARY KEY (Venu_id),
+
+    CONSTRAINT CK_VENUE_CAPACITY
+        CHECK (Capacity >= 0)
+);
+
+
+
+CREATE TABLE TRAINING_SESSION (
+    Session_id NUMBER(10),
+    Session_date DATE,
+    Session_time VARCHAR2(20),
+    Status VARCHAR2(30),
+    Trainer_id NUMBER(10),
+    Venu_id NUMBER(10),
+
+    CONSTRAINT PK_TRAINING_SESSION
+        PRIMARY KEY (Session_id),
+
+    CONSTRAINT FK_SESSION_TRAINER
+        FOREIGN KEY (Trainer_id)
+        REFERENCES TRAINER(Trainer_id),
+
+    CONSTRAINT FK_SESSION_VENUE
+        FOREIGN KEY (Venu_id)
+        REFERENCES VENUE(Venu_id)
+);
+
+
+
+CREATE TABLE PAYMENT (
+    Cricketer_id NUMBER(10),
+    Program_id NUMBER(10),
+    Payment_Status VARCHAR2(30),
+    Amount NUMBER(10,2),
+    Due_Date DATE,
+    Payment_Date DATE,
+
+    CONSTRAINT PK_PAYMENT
+        PRIMARY KEY (Cricketer_id, Program_id),
+
+    CONSTRAINT FK_PAYMENT_CRICKETER
+        FOREIGN KEY (Cricketer_id)
+        REFERENCES CRICKETER(Cricketer_id),
+
+    CONSTRAINT FK_PAYMENT_PROGRAM
+        FOREIGN KEY (Program_id)
+        REFERENCES CRICKET_PROGRAM(Program_id),
+
+    CONSTRAINT CK_PAYMENT_AMOUNT
+        CHECK (Amount >= 0)
+);
+
+
+
+CREATE TABLE EQUIPMENT_ISSUED (
+    Cricketer_id NUMBER(10),
+    Equipment_id NUMBER(10),
+    Issue_date DATE,
+    Return_Date DATE,
+    Quantity NUMBER(10),
+    Issue_Status VARCHAR2(30),
+
+    CONSTRAINT PK_EQUIPMENT_ISSUED
+        PRIMARY KEY (Cricketer_id, Equipment_id, Issue_date),
+
+    CONSTRAINT FK_ISSUED_CRICKETER
+        FOREIGN KEY (Cricketer_id)
+        REFERENCES CRICKETER(Cricketer_id),
+
+    CONSTRAINT FK_ISSUED_EQUIPMENT
+        FOREIGN KEY (Equipment_id)
+        REFERENCES EQUIPMENT(Equipment_id),
+
+    CONSTRAINT CK_ISSUED_QUANTITY
+        CHECK (Quantity > 0),
+
+    CONSTRAINT CK_ISSUED_DATES
+        CHECK (Return_Date IS NULL OR Return_Date >= Issue_date)
+);
+
+
+
+
+CREATE TABLE APPLIED_TO (
+    Cricketer_id NUMBER(10),
+    Program_id NUMBER(10),
+    Applied_Status VARCHAR2(30),
+    Applied_Date DATE,
+
+    CONSTRAINT PK_APPLIED_TO
+        PRIMARY KEY (Cricketer_id, Program_id),
+
+    CONSTRAINT FK_APPLIED_CRICKETER
+        FOREIGN KEY (Cricketer_id)
+        REFERENCES CRICKETER(Cricketer_id),
+
+    CONSTRAINT FK_APPLIED_PROGRAM
+        FOREIGN KEY (Program_id)
+        REFERENCES CRICKET_PROGRAM(Program_id)
+);
+
+
+
+CREATE TABLE PARTICIPATE_IN (
+    Cricketer_id NUMBER(10),
+    Session_id NUMBER(10),
+    Participation_time VARCHAR2(20),
+    Attendance VARCHAR2(20),
+
+    CONSTRAINT PK_PARTICIPATE_IN
+        PRIMARY KEY (Cricketer_id, Session_id),
+
+    CONSTRAINT FK_PARTICIPATE_CRICKETER
+        FOREIGN KEY (Cricketer_id)
+        REFERENCES CRICKETER(Cricketer_id),
+
+    CONSTRAINT FK_PARTICIPATE_SESSION
+        FOREIGN KEY (Session_id)
+        REFERENCES TRAINING_SESSION(Session_id)
+);
+
+
+CHECK TABLE 
+SELECT table_name
+FROM user_tables
+ORDER BY table_name;
+
+
+CHECK CONSTRAINT
+SELECT
+    Constraint_Name,
+    Table_Name,
+    Constraint_Type,
+    Status
+FROM USER_CONSTRAINTS
+WHERE Table_Name IN (
+    'USERS',
+    'CRICKETER',
+    'TRAINER',
+    'CRICKET_PROGRAM',
+    'EQUIPMENT',
+    'VENUE',
+    'TRAINING_SESSION',
+    'PAYMENT',
+    'EQUIPMENT_ISSUED',
+    'APPLIED_TO',
+    'PARTICIPATE_IN'
+)
+ORDER BY Table_Name, Constraint_Type;
+
+
+
