@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Coaches & Trainers Directory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">🧢 Academy Coaches &amp; Trainers (TRAINER)</h1>
+        <p class="page-subtitle">Manage coaching staff, specialties, coaching qualifications, and compensation.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" onclick="openModal('addTrainerModal')">
+            + Add Head Coach / Trainer
+        </button>
+    </div>
+</div>
+
+<!-- Search Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('trainers') }}" class="search-form">
+        <input type="text" name="search" class="form-control" placeholder="Search by coach name, specialization or credentials..." value="{{ search or '' }}">
+        <button type="submit" class="btn btn-secondary">Search</button>
+        {% if search %}
+        <a href="{{ url_for('trainers') }}" class="btn btn-secondary" title="Clear Search">&times;</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Trainers Table -->
+{% if trainers %}
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Coach Name</th>
+                <th>Specialization</th>
+                <th>Experience</th>
+                <th>Qualification</th>
+                <th>Salary (INR)</th>
+                <th>Contact</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in trainers %}
+            <tr>
+                <td><strong>#{{ t.trainer_id }}</strong></td>
+                <td>
+                    <strong>{{ t.name }}</strong><br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">User #{{ t.user_id }}</span>
+                </td>
+                <td><span class="badge badge-completed">{{ t.specialization or 'All-Round Coaching' }}</span></td>
+                <td>{{ t.experience }} Yrs</td>
+                <td>{{ t.qualification or 'BCCI Certified' }}</td>
+                <td style="font-weight: 600;">₹{{ "{:,.2f}".format(t.salary) }}</td>
+                <td>
+                    {{ t.phone or '—' }}<br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ t.address or '' }}</span>
+                </td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick='populateEditModal("editTrainerModal", {
+                        "trainer_id": "{{ t.trainer_id }}",
+                        "name": "{{ t.name }}",
+                        "phone": "{{ t.phone or '' }}",
+                        "address": "{{ t.address or '' }}",
+                        "specialization": "{{ t.specialization or '' }}",
+                        "experience": "{{ t.experience }}",
+                        "qualification": "{{ t.qualification or '' }}",
+                        "salary": "{{ t.salary }}"
+                    })'>Edit</button>
+
+                    <form method="POST" action="{{ url_for('trainers') }}" style="display: inline;" data-confirm="Delete trainer #{{ t.trainer_id }} and linked user record?">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="trainer_id" value="{{ t.trainer_id }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <div class="empty-state-icon">🧢</div>
+    <div class="empty-state-title">No Trainers Found</div>
+    <p>Add coaching staff using the button above.</p>
+</div>
+{% endif %}
+
+<!-- Add Trainer Modal -->
+<div class="modal-overlay" id="addTrainerModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Enrol New Coach / Trainer</h2>
+            <button type="button" class="modal-close" onclick="closeModal('addTrainerModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('trainers') }}">
+            <input type="hidden" name="action" value="create">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" name="name" class="form-control" required placeholder="e.g. Gary Kirsten">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Specialization</label>
+                        <input type="text" name="specialization" class="form-control" placeholder="e.g. Fast Bowling Technique">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Experience (Years)</label>
+                        <input type="number" name="experience" class="form-control" value="5" min="0">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Qualification / Degree</label>
+                        <input type="text" name="qualification" class="form-control" placeholder="e.g. ICC Level 3 Coach">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Monthly Salary (INR)</label>
+                        <input type="number" name="salary" class="form-control" value="65000" min="0" step="500">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Contact Phone</label>
+                        <input type="text" name="phone" class="form-control" placeholder="10-digit mobile number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Initial Password</label>
+                        <input type="password" name="password" class="form-control" value="password123">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Residential Address</label>
+                    <textarea name="address" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addTrainerModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Enrol Trainer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Trainer Modal -->
+<div class="modal-overlay" id="editTrainerModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Edit Coach Profile</h2>
+            <button type="button" class="modal-close" onclick="closeModal('editTrainerModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('trainers') }}">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="trainer_id">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Specialization</label>
+                        <input type="text" name="specialization" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Experience (Years)</label>
+                        <input type="number" name="experience" class="form-control" min="0">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Qualification</label>
+                        <input type="text" name="qualification" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Monthly Salary (INR)</label>
+                        <input type="number" name="salary" class="form-control" min="0" step="500">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contact Phone</label>
+                    <input type="text" name="phone" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Residential Address</label>
+                    <textarea name="address" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editTrainerModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Profile</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Fee Payments &amp; Finances{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">💳 Academy Payments &amp; Fees (PAYMENT)</h1>
+        <p class="page-subtitle">Track player program fees, due dates, payment receipts, and collection statuses.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" onclick="openModal('addPaymentModal')">
+            + Generate Fee Invoice
+        </button>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('payments') }}" class="search-form">
+        <input type="text" name="search" class="form-control" placeholder="Search by cricketer or program..." value="{{ search or '' }}">
+        <select name="status" class="form-control" style="max-width: 160px;" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="Paid" {% if status_filter == 'Paid' %}selected{% endif %}>Paid</option>
+            <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+            <option value="Failed" {% if status_filter == 'Failed' %}selected{% endif %}>Failed</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search or status_filter %}
+        <a href="{{ url_for('payments') }}" class="btn btn-secondary" title="Clear Filters">&times;</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Payments Table -->
+{% if payments %}
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Cricketer</th>
+                <th>Program</th>
+                <th>Due Date</th>
+                <th>Payment Date</th>
+                <th>Amount (INR)</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in payments %}
+            <tr>
+                <td>
+                    <strong>{{ p.cricketer_name }}</strong><br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ p.cricketer_phone or 'No phone' }}</span>
+                </td>
+                <td>{{ p.program_name }}</td>
+                <td>{{ p.due_date.strftime('%d-%b-%Y') if p.due_date.strftime is defined else p.due_date }}</td>
+                <td>
+                    {% if p.payment_date %}
+                    {{ p.payment_date.strftime('%d-%b-%Y') if p.payment_date.strftime is defined else p.payment_date }}
+                    {% else %}
+                    <span style="color: var(--color-text-light);">Not Paid</span>
+                    {% endif %}
+                </td>
+                <td style="font-weight: 700;">₹{{ "{:,.2f}".format(p.amount) }}</td>
+                <td><span class="badge badge-{{ p.payment_status|lower }}">{{ p.payment_status }}</span></td>
+                <td style="text-align: right; white-space: nowrap;">
+                    {% if p.payment_status != 'Paid' %}
+                    <form method="POST" action="{{ url_for('payments') }}" style="display: inline;">
+                        <input type="hidden" name="action" value="mark_paid">
+                        <input type="hidden" name="cricketer_id" value="{{ p.cricketer_id }}">
+                        <input type="hidden" name="program_id" value="{{ p.program_id }}">
+                        <input type="hidden" name="due_date" value="{{ p.due_date.strftime("%Y-%m-%d") if p.due_date.strftime is defined else p.due_date }}">
+                        <button type="submit" class="btn btn-sm btn-gold">Mark as Paid</button>
+                    </form>
+                    {% endif %}
+
+                    <form method="POST" action="{{ url_for('payments') }}" style="display: inline;" data-confirm="Delete fee record for {{ p.cricketer_name }}?">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="cricketer_id" value="{{ p.cricketer_id }}">
+                        <input type="hidden" name="program_id" value="{{ p.program_id }}">
+                        <input type="hidden" name="due_date" value="{{ p.due_date.strftime("%Y-%m-%d") if p.due_date.strftime is defined else p.due_date }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <div class="empty-state-icon">💳</div>
+    <div class="empty-state-title">No Payment Records Found</div>
+    <p>Generate fee invoices using the button above.</p>
+</div>
+{% endif %}
+
+<!-- Add Payment Modal -->
+<div class="modal-overlay" id="addPaymentModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Generate Fee Invoice</h2>
+            <button type="button" class="modal-close" onclick="closeModal('addPaymentModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('payments') }}">
+            <input type="hidden" name="action" value="create">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Enrolled Cricketer *</label>
+                    <select name="cricketer_id" class="form-control" required>
+                        {% for c in cricketers %}
+                        <option value="{{ c.cricketer_id }}">{{ c.name }} (#{{ c.cricketer_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Cricket Program *</label>
+                    <select name="program_id" class="form-control" required>
+                        {% for p in programs %}
+                        <option value="{{ p.program_id }}">{{ p.program_name }} ({{ p.duration }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Amount (INR) *</label>
+                        <input type="number" name="amount" class="form-control" required min="0" step="100" placeholder="e.g. 15000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Due Date *</label>
+                        <input type="date" name="due_date" class="form-control" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Payment Status</label>
+                        <select name="payment_status" class="form-control">
+                            <option value="Pending">Pending</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Failed">Failed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Payment Date (if Paid)</label>
+                        <input type="date" name="payment_date" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addPaymentModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Generate Invoice</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

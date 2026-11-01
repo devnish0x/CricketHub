@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In{% endblock %}
+
+{% block content %}
+<div class="auth-page-container">
+    <div class="auth-card" style="max-width: 460px;">
+        <div class="auth-header">
+            <div class="auth-icon">🏏</div>
+            <h1 class="auth-title">Member Sign In</h1>
+            <p class="auth-subtitle">Access your player dashboard, schedules, and training resources.</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('login') }}" class="auth-form" id="login-form">
+            <div class="form-group">
+                <label for="identifier" class="form-label">User ID or Phone Number</label>
+                <input type="text" class="form-control" id="identifier" name="identifier" placeholder="e.g. 1 or 9876543210" required autofocus>
+                <small class="form-text">Enter your registered numeric User ID or 10-digit mobile number.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Account Password</label>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+            </div>
+
+            <button type="submit" class="btn btn-gold btn-lg btn-pill" style="width: 100%; margin-top: 12px;" id="login-submit-btn">
+                Sign In to Crickethub
+            </button>
+        </form>
+
+        <div class="auth-footer-links">
+            <p>New to the academy? <a href="{{ url_for('register') }}" style="font-weight: 600; color: var(--color-pitch-gold);">Register as a Cricketer</a></p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: var(--color-text-light);">
+                Demo credentials for evaluation are documented in <code>DEMO_ACCOUNTS.md</code>.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

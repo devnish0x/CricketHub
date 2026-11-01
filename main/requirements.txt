@@ -1,0 +1,7 @@
+# Crickethub Python Dependencies
+# Install with: pip install -r requirements.txt
+
+Flask>=3.0.0
+oracledb>=2.0.0
+python-dotenv>=1.0.0
+Werkzeug>=3.0.0

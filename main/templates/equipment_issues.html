@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Gear Checkouts &amp; Returns{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">🔄 Gear Checkouts &amp; Returns (EQUIPMENT_ISSUED)</h1>
+        <p class="page-subtitle">Equipment issuance validated by PL/SQL Procedure &bull; Synchronized by Database Trigger.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" onclick="openModal('issueGearModal')">
+            + Checkout / Issue Gear
+        </button>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('equipment_issues') }}" class="search-form">
+        <input type="text" name="search" class="form-control" placeholder="Search by borrower or equipment..." value="{{ search or '' }}">
+        <select name="status" class="form-control" style="max-width: 160px;" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="Issued" {% if status_filter == 'Issued' %}selected{% endif %}>Issued (Active)</option>
+            <option value="Returned" {% if status_filter == 'Returned' %}selected{% endif %}>Returned</option>
+            <option value="Overdue" {% if status_filter == 'Overdue' %}selected{% endif %}>Overdue</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search or status_filter %}
+        <a href="{{ url_for('equipment_issues') }}" class="btn btn-secondary" title="Clear Filters">&times;</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Issues Table -->
+{% if issues %}
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Borrower (Cricketer)</th>
+                <th>Gear Item</th>
+                <th>Quantity</th>
+                <th>Checkout Date</th>
+                <th>Return Date</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in issues %}
+            <tr>
+                <td>
+                    <strong>{{ i.cricketer_name }}</strong><br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ i.cricketer_phone or 'No phone' }}</span>
+                </td>
+                <td>
+                    <strong>{{ i.equipment_name }}</strong><br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ i.equipment_type }}</span>
+                </td>
+                <td><strong>{{ i.quantity }} Unit(s)</strong></td>
+                <td>{{ i.issue_date.strftime('%d-%b-%Y') if i.issue_date.strftime is defined else i.issue_date }}</td>
+                <td>
+                    {% if i.return_date %}
+                    {{ i.return_date.strftime('%d-%b-%Y') if i.return_date.strftime is defined else i.return_date }}
+                    {% else %}
+                    <span style="color: var(--color-pitch-gold); font-weight: 500;">Currently Out</span>
+                    {% endif %}
+                </td>
+                <td><span class="badge badge-{{ i.issue_status|lower }}">{{ i.issue_status }}</span></td>
+                <td style="text-align: right; white-space: nowrap;">
+                    {% if i.issue_status == 'Issued' %}
+                    <form method="POST" action="{{ url_for('equipment_issues') }}" style="display: inline;">
+                        <input type="hidden" name="action" value="return">
+                        <input type="hidden" name="cricketer_id" value="{{ i.cricketer_id }}">
+                        <input type="hidden" name="equipment_id" value="{{ i.equipment_id }}">
+                        <input type="hidden" name="issue_date" value="{{ i.issue_date.strftime("%Y-%m-%d") if i.issue_date.strftime is defined else i.issue_date }}">
+                        <button type="submit" class="btn btn-sm btn-gold">Mark Returned</button>
+                    </form>
+                    {% endif %}
+
+                    <form method="POST" action="{{ url_for('equipment_issues') }}" style="display: inline;" data-confirm="Delete issue record?">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="cricketer_id" value="{{ i.cricketer_id }}">
+                        <input type="hidden" name="equipment_id" value="{{ i.equipment_id }}">
+                        <input type="hidden" name="issue_date" value="{{ i.issue_date.strftime("%Y-%m-%d") if i.issue_date.strftime is defined else i.issue_date }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <div class="empty-state-icon">🔄</div>
+    <div class="empty-state-title">No Gear Checkout Records</div>
+    <p>Issue training equipment to players using the button above.</p>
+</div>
+{% endif %}
+
+<!-- Issue Gear Modal -->
+<div class="modal-overlay" id="issueGearModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Checkout Academy Gear</h2>
+            <button type="button" class="modal-close" onclick="closeModal('issueGearModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('equipment_issues') }}">
+            <input type="hidden" name="action" value="issue">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Borrower Cricketer *</label>
+                    <select name="cricketer_id" class="form-control" required>
+                        {% for c in cricketers %}
+                        <option value="{{ c.cricketer_id }}">{{ c.name }} (#{{ c.cricketer_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Available Equipment *</label>
+                    <select name="equipment_id" class="form-control" required>
+                        {% for eq in equipment %}
+                        <option value="{{ eq.equipment_id }}">
+                            {{ eq.equipment_name }} ({{ eq.quantity }} units in stock)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Checkout Quantity *</label>
+                    <input type="number" name="quantity" class="form-control" value="1" min="1" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('issueGearModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Process Checkout</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

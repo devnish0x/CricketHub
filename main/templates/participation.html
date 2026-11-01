@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Training Attendance &amp; Participation{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📅 Session Attendance (PARTICIPATE_IN)</h1>
+        <p class="page-subtitle">Roster player attendances &bull; Evaluated via PL/SQL Function <code>calculate_attendance_pct</code>.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" onclick="openModal('recordAttendanceModal')">
+            + Record Session Attendance
+        </button>
+    </div>
+</div>
+
+<!-- Player Attendance Summary Card (If Cricketer View or Calculation Available) -->
+{% if attendance_pct is not none %}
+<div class="card" style="background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%); color: #ffffff; margin-bottom: 24px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <h3 style="color: var(--color-pitch-gold); font-size: 1.1rem; margin-bottom: 4px;">My Training Attendance Performance</h3>
+            <p style="color: #cfdbd5; font-size: 0.88rem;">Calculated dynamically using Oracle PL/SQL Function: <code>calculate_attendance_pct({{ current_user.id }})</code></p>
+        </div>
+        <div style="text-align: right;">
+            <span style="font-size: 2.2rem; font-weight: 700; color: #ffffff;">{{ attendance_pct }}%</span>
+            <span style="display: block; font-size: 0.8rem; color: #a3b899;">Overall Session Attendance</span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('participation') }}" class="search-form">
+        <input type="text" name="search" class="form-control" placeholder="Search by player or ground..." value="{{ search or '' }}">
+        <select name="session_id" class="form-control" style="max-width: 220px;" onchange="this.form.submit()">
+            <option value="">All Training Sessions</option>
+            {% for s in sessions %}
+            <option value="{{ s.session_id }}" {% if sid_filter == s.session_id|string %}selected{% endif %}>
+                Session #{{ s.session_id }} ({{ s.session_date.strftime('%d-%b') if s.session_date.strftime is defined else s.session_date }})
+            </option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search or sid_filter %}
+        <a href="{{ url_for('participation') }}" class="btn btn-secondary" title="Clear Filters">&times;</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Participation Table -->
+{% if participations %}
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Cricketer Name</th>
+                <th>Session Details</th>
+                <th>Ground / Venue</th>
+                <th>Time Logged</th>
+                <th>Attendance</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in participations %}
+            <tr>
+                <td>
+                    <strong>{{ p.cricketer_name }}</strong><br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ p.cricketer_phone or 'No phone' }}</span>
+                </td>
+                <td>
+                    <strong>Session #{{ p.session_id }}</strong> &bull; {{ p.session_date.strftime('%d-%b-%Y') if p.session_date.strftime is defined else p.session_date }}<br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ p.session_time }} ({{ p.session_status }})</span>
+                </td>
+                <td>{{ p.venu_name }}</td>
+                <td>{{ p.participation_time or '2 Hours' }}</td>
+                <td><span class="badge badge-{{ p.attendance|lower }}">{{ p.attendance }}</span></td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick='populateEditModal("editAttendanceModal", {
+                        "cricketer_id": "{{ p.cricketer_id }}",
+                        "session_id": "{{ p.session_id }}",
+                        "participation_time": "{{ p.participation_time or "2 Hours" }}",
+                        "attendance": "{{ p.attendance }}"
+                    })'>Update</button>
+
+                    <form method="POST" action="{{ url_for('participation') }}" style="display: inline;" data-confirm="Delete attendance entry?">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="cricketer_id" value="{{ p.cricketer_id }}">
+                        <input type="hidden" name="session_id" value="{{ p.session_id }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <div class="empty-state-icon">📅</div>
+    <div class="empty-state-title">No Participation Records Found</div>
+    <p>Mark player session attendances using the button above.</p>
+</div>
+{% endif %}
+
+<!-- Record Attendance Modal -->
+<div class="modal-overlay" id="recordAttendanceModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Record Session Attendance</h2>
+            <button type="button" class="modal-close" onclick="closeModal('recordAttendanceModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('participation') }}">
+            <input type="hidden" name="action" value="record">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Training Session *</label>
+                    <select name="session_id" class="form-control" required>
+                        {% for s in sessions %}
+                        <option value="{{ s.session_id }}">
+                            Session #{{ s.session_id }} &bull; {{ s.session_date.strftime('%d-%b-%Y') if s.session_date.strftime is defined else s.session_date }} ({{ s.session_time }}) &bull; {{ s.venu_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Attending Cricketer *</label>
+                    <select name="cricketer_id" class="form-control" required>
+                        {% for c in cricketers %}
+                        <option value="{{ c.cricketer_id }}">{{ c.name }} (#{{ c.cricketer_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Time Logged</label>
+                        <input type="text" name="participation_time" class="form-control" value="2 Hours" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Attendance Status</label>
+                        <select name="attendance" class="form-control">
+                            <option value="Present">Present</option>
+                            <option value="Absent">Absent</option>
+                            <option value="Excused">Excused</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('recordAttendanceModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Attendance</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Attendance Modal -->
+<div class="modal-overlay" id="editAttendanceModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Update Attendance Entry</h2>
+            <button type="button" class="modal-close" onclick="closeModal('editAttendanceModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('participation') }}">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="cricketer_id">
+            <input type="hidden" name="session_id">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Time Logged</label>
+                    <input type="text" name="participation_time" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Attendance Status</label>
+                    <select name="attendance" class="form-control">
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Excused">Excused</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editAttendanceModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Entry</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

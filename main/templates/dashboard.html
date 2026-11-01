@@ -1,0 +1,586 @@
+{% extends "base.html" %}
+
+{% block title %}Academy Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+            <h1 class="page-title" style="margin-bottom: 0;">Welcome, {{ current_user.name }}</h1>
+            <span class="user-role-tag role-{{ current_user.role|lower|replace(' ', '-') }}">{{ current_user.role
+                }}</span>
+        </div>
+        <p class="page-subtitle">Real-time academy management &bull; Connected to Oracle Database 21c</p>
+    </div>
+    <div>
+        {% if health and health.connected %}
+        <span class="badge badge-paid"
+            style="padding: 8px 16px; font-size: 0.85rem; border-radius: var(--radius-pill);">
+            🟢 Oracle 21c Connected ({{ health.tables_found or 0 }}/11 Tables Verified)
+        </span>
+        {% else %}
+        <span class="badge badge-failed"
+            style="padding: 8px 16px; font-size: 0.85rem; border-radius: var(--radius-pill);">
+            🔴 Database Disconnected: {{ health.message if health else 'Service Unavailable' }}
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+{# ===================================================================== #}
+{# 1. SUPER ADMIN DASHBOARD VIEW #}
+{# ===================================================================== #}
+{% if role == 'Super Admin' %}
+<div class="metrics-grid">
+    <div class="metric-card">
+        <span class="metric-label">Registered Cricketers</span>
+        <div class="metric-value">{{ (metrics.counts or {}).total_cricketers or 0 }}</div>
+        <span class="metric-sub">Active academy players</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Certified Coaches</span>
+        <div class="metric-value">{{ (metrics.counts or {}).total_trainers or 0 }}</div>
+        <span class="metric-sub">BCCI / ICC accredited</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Training Programs</span>
+        <div class="metric-value">{{ (metrics.counts or {}).total_programs or 0 }}</div>
+        <span class="metric-sub">Active curriculums</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Scheduled Sessions</span>
+        <div class="metric-value">{{ (metrics.counts or {}).upcoming_sessions or 0 }}</div>
+        <span class="metric-sub">Upcoming ground slots</span>
+    </div>
+
+    <div class="metric-card accent-gold">
+        <span class="metric-label">Collected Fees</span>
+        <div class="metric-value">₹{{ "{:,.0f}".format((metrics.counts or {}).collected_revenue or 0) }}</div>
+        <span class="metric-sub">Total verified payments</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Outstanding Dues</span>
+        <div class="metric-value" style="color: var(--status-danger-text);">
+            ₹{{ "{:,.0f}".format((metrics.counts or {}).pending_revenue or 0) }}
+        </div>
+        <span class="metric-sub">Pending player fee invoices</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Pending Applications</span>
+        <div class="metric-value">{{ (metrics.counts or {}).pending_applications or 0 }}</div>
+        <span class="metric-sub">Awaiting review</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Gear Checked Out</span>
+        <div class="metric-value">{{ (metrics.counts or {}).active_issued_gear or 0 }}</div>
+        <span class="metric-sub">Equipment units in use</span>
+    </div>
+</div>
+
+<!-- Admin Quick Actions Bar -->
+<div class="dashboard-actions-strip">
+    <span style="font-weight: 600; color: var(--color-primary-dark); font-size: 0.9rem;">Quick Admin Operations:</span>
+    <a href="{{ url_for('users') }}" class="btn btn-sm btn-secondary btn-pill">+ Manage Users</a>
+    <a href="{{ url_for('programs') }}" class="btn btn-sm btn-secondary btn-pill">+ New Program</a>
+    <a href="{{ url_for('sessions') }}" class="btn btn-sm btn-secondary btn-pill">+ Schedule Session</a>
+    <a href="{{ url_for('payments') }}" class="btn btn-sm btn-secondary btn-pill">💳 Financial Invoices</a>
+    <a href="{{ url_for('reports') }}" class="btn btn-sm btn-gold btn-pill">📊 Coursework Advanced SQL</a>
+</div>
+
+<!-- Super Admin Two-Column Operational Section -->
+<div class="two-col-grid">
+    <!-- Upcoming Training Sessions -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📅 Upcoming Training Sessions</h2>
+            <a href="{{ url_for('sessions') }}" class="btn btn-sm btn-secondary btn-pill">View All</a>
+        </div>
+        {% if metrics.recent_sessions %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Coach</th>
+                        <th>Ground / Venue</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in metrics.recent_sessions %}
+                    <tr>
+                        <td>
+                            <strong>{{ s.session_date.strftime('%d-%b-%Y') if s.session_date and s.session_date.strftime
+                                is defined else s.session_date }}</strong><br>
+                            <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ s.session_time }}</span>
+                        </td>
+                        <td>{{ s.trainer_name }}</td>
+                        <td>{{ s.venu_name }}</td>
+                        <td><span class="badge badge-{{ s.status|lower }}">{{ s.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">⏱️</div>
+            <div class="empty-state-title">No Upcoming Sessions</div>
+            <p>Schedule a training session in the Training module.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Outstanding Payment Invoices -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">💳 Outstanding Fee Dues</h2>
+            <a href="{{ url_for('payments') }}?status=Pending" class="btn btn-sm btn-secondary btn-pill">Manage
+                Invoices</a>
+        </div>
+        {% if metrics.pending_payments %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Cricketer</th>
+                        <th>Program</th>
+                        <th>Due Date</th>
+                        <th>Amount</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in metrics.pending_payments %}
+                    <tr>
+                        <td><strong>{{ p.cricketer_name }}</strong></td>
+                        <td>{{ p.program_name }}</td>
+                        <td>{{ p.due_date.strftime('%d-%b-%Y') if p.due_date and p.due_date.strftime is defined else
+                            p.due_date }}</td>
+                        <td style="font-weight: 600; color: var(--status-danger-text);">₹{{ "{:,.2f}".format(p.amount or
+                            0) }}</td>
+                        <td>
+                            <a href="{{ url_for('payments') }}?search={{ p.cricketer_name }}"
+                                class="btn btn-sm btn-primary btn-pill">Review</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">✅</div>
+            <div class="empty-state-title">All Dues Cleared</div>
+            <p>No outstanding pending payments at this moment.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ===================================================================== #}
+{# 2. SYSTEM USER (OPERATIONS / STAFF) DASHBOARD VIEW #}
+{# ===================================================================== #}
+{% elif role == 'System User' %}
+<div class="metrics-grid">
+    <div class="metric-card">
+        <span class="metric-label">Registered Cricketers</span>
+        <div class="metric-value">{{ (metrics.counts or {}).total_cricketers or 0 }}</div>
+        <span class="metric-sub">Active trainees</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Active Head Coaches</span>
+        <div class="metric-value">{{ (metrics.counts or {}).total_trainers or 0 }}</div>
+        <span class="metric-sub">Coaching on grounds</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Scheduled Sessions</span>
+        <div class="metric-value">{{ (metrics.counts or {}).upcoming_sessions or 0 }}</div>
+        <span class="metric-sub">Ground bookings</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Available Grounds</span>
+        <div class="metric-value">{{ (metrics.counts or {}).available_venues or 0 }}</div>
+        <span class="metric-sub">Venues ready for play</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Pending Applications</span>
+        <div class="metric-value">{{ (metrics.counts or {}).pending_applications or 0 }}</div>
+        <span class="metric-sub">Awaiting enrollment review</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Gear Checked Out</span>
+        <div class="metric-value">{{ (metrics.counts or {}).active_issued_gear or 0 }}</div>
+        <span class="metric-sub">Equipment units in use</span>
+    </div>
+</div>
+
+<!-- Operations Quick Actions -->
+<div class="dashboard-actions-strip">
+    <span style="font-weight: 600; color: var(--color-primary-dark); font-size: 0.9rem;">Operations Tasks:</span>
+    <a href="{{ url_for('sessions') }}" class="btn btn-sm btn-secondary btn-pill">+ Schedule Session</a>
+    <a href="{{ url_for('applications') }}" class="btn btn-sm btn-secondary btn-pill">📝 Review Applications</a>
+    <a href="{{ url_for('equipment_issues') }}" class="btn btn-sm btn-secondary btn-pill">🔄 Check Out Gear</a>
+    <a href="{{ url_for('participation') }}" class="btn btn-sm btn-secondary btn-pill">📅 Attendance Logging</a>
+    <a href="{{ url_for('reports') }}" class="btn btn-sm btn-gold btn-pill">📊 Advanced SQL Reports</a>
+</div>
+
+<div class="two-col-grid">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📅 Ground Session Schedule</h2>
+            <a href="{{ url_for('sessions') }}" class="btn btn-sm btn-secondary btn-pill">View All</a>
+        </div>
+        {% if metrics.recent_sessions %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Coach</th>
+                        <th>Venue</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in metrics.recent_sessions %}
+                    <tr>
+                        <td>
+                            <strong>{{ s.session_date.strftime('%d-%b-%Y') if s.session_date and s.session_date.strftime
+                                is defined else s.session_date }}</strong><br>
+                            <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ s.session_time }}</span>
+                        </td>
+                        <td>{{ s.trainer_name }}</td>
+                        <td>{{ s.venu_name }}</td>
+                        <td><span class="badge badge-{{ s.status|lower }}">{{ s.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">⏱️</div>
+            <div class="empty-state-title">No Sessions Scheduled</div>
+            <p>Schedule a new ground session to begin operations.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📝 Program Applications Action Queue</h2>
+            <a href="{{ url_for('applications') }}" class="btn btn-sm btn-secondary btn-pill">Manage Queue</a>
+        </div>
+        <div style="padding: 24px; text-align: center;">
+            <div style="font-size: 2.4rem; color: var(--color-pitch-gold); font-weight: 700; margin-bottom: 8px;">
+                {{ metrics.counts.pending_applications or 0 }}
+            </div>
+            <p style="color: var(--color-text-muted); margin-bottom: 16px;">
+                Cricketers currently waiting for enrollment approvals in cricket programs.
+            </p>
+            <a href="{{ url_for('applications') }}?status=Pending" class="btn btn-primary btn-pill">
+                Open Applications Review Queue &rarr;
+            </a>
+        </div>
+    </div>
+</div>
+
+{# ===================================================================== #}
+{# 3. TRAINER DASHBOARD VIEW #}
+{# ===================================================================== #}
+{% elif role == 'Trainer' %}
+<div class="metrics-grid">
+    <div class="metric-card">
+        <span class="metric-label">My Assigned Sessions</span>
+        <div class="metric-value">{{ (trainer_data.counts or {}).total_sessions or 0 }}</div>
+        <span class="metric-sub">Total conducted or planned</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Upcoming Scheduled</span>
+        <div class="metric-value">{{ (trainer_data.counts or {}).upcoming_sessions or 0 }}</div>
+        <span class="metric-sub">Sessions ready for coaching</span>
+    </div>
+
+    <div class="metric-card accent-gold">
+        <span class="metric-label">Unique Trainees Coached</span>
+        <div class="metric-value">{{ (trainer_data.counts or {}).total_trainees or 0 }}</div>
+        <span class="metric-sub">Distinct cricketers trained</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Attendance Records</span>
+        <div class="metric-value">{{ (trainer_data.counts or {}).total_attendances or 0 }}</div>
+        <span class="metric-sub">Player attendances logged</span>
+    </div>
+</div>
+
+<div class="dashboard-actions-strip">
+    <span style="font-weight: 600; color: var(--color-primary-dark); font-size: 0.9rem;">Coach Navigation:</span>
+    <a href="{{ url_for('sessions') }}" class="btn btn-sm btn-secondary btn-pill">⏱️ My Assigned Sessions</a>
+    <a href="{{ url_for('participation') }}" class="btn btn-sm btn-primary btn-pill">📅 Record Attendance</a>
+    <a href="{{ url_for('cricketers') }}" class="btn btn-sm btn-secondary btn-pill">🏏 Trainee Directory</a>
+    <a href="{{ url_for('reports') }}" class="btn btn-sm btn-gold btn-pill">📊 Attendance Roster Report</a>
+</div>
+
+<div class="two-col-grid">
+    <!-- Trainer's Assigned Sessions -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">⏱️ My Assigned Training Sessions</h2>
+            <a href="{{ url_for('sessions') }}" class="btn btn-sm btn-secondary btn-pill">View All</a>
+        </div>
+        {% if trainer_data.my_sessions %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Ground / Venue</th>
+                        <th>Trainees</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in trainer_data.my_sessions %}
+                    <tr>
+                        <td>
+                            <strong>{{ s.session_date.strftime('%d-%b-%Y') if s.session_date and s.session_date.strftime
+                                is defined else s.session_date }}</strong><br>
+                            <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ s.session_time }}</span>
+                        </td>
+                        <td>{{ s.venu_name }} ({{ s.location }})</td>
+                        <td><span class="badge badge-info">{{ s.trainee_count }} Registered</span></td>
+                        <td><span class="badge badge-{{ s.status|lower }}">{{ s.status }}</span></td>
+                        <td>
+                            <a href="{{ url_for('participation') }}?session_id={{ s.session_id }}"
+                                class="btn btn-sm btn-primary btn-pill">
+                                Mark Attendance
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🧢</div>
+            <div class="empty-state-title">No Sessions Assigned</div>
+            <p>You currently have no training sessions assigned on the schedule.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Trainees in Coach's Sessions -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🏏 Trainees Under My Supervision</h2>
+            <a href="{{ url_for('cricketers') }}" class="btn btn-sm btn-secondary btn-pill">Full Directory</a>
+        </div>
+        {% if trainer_data.trainees %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Player Name</th>
+                        <th>Contact</th>
+                        <th>Batting Style</th>
+                        <th>Bowling Style</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in trainer_data.trainees %}
+                    <tr>
+                        <td><strong>{{ t.name }}</strong></td>
+                        <td>{{ t.phone }}</td>
+                        <td>{{ t.batting_style }}</td>
+                        <td>{{ t.bowling_style }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🏏</div>
+            <div class="empty-state-title">No Active Trainees</div>
+            <p>Players will appear here once registered into your scheduled sessions.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ===================================================================== #}
+{# 4. CRICKETER (PLAYER) DASHBOARD VIEW #}
+{# ===================================================================== #}
+{% elif role == 'Cricketer' %}
+<div class="metrics-grid">
+    <div class="metric-card accent-gold">
+        <span class="metric-label">My Overall Attendance</span>
+        <div class="metric-value">{{ "{:,.1f}".format(cricketer_data.attendance_pct or 0) }}%</div>
+        <span class="metric-sub">
+            {% if (cricketer_data.attendance_pct or 0) >= 75 %}
+            🟢 Excellent commitment
+            {% elif (cricketer_data.attendance_pct or 0) >= 50 %}
+            🟡 Satisfactory attendance
+            {% else %}
+            🔴 Needs improvement (&lt; 75%)
+            {% endif %}
+        </span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Approved Programs</span>
+        <div class="metric-value">{{ (cricketer_data.counts or {}).approved_programs or 0 }}</div>
+        <span class="metric-sub">Active training curriculums</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Upcoming Sessions</span>
+        <div class="metric-value">{{ (cricketer_data.counts or {}).upcoming_sessions or 0 }}</div>
+        <span class="metric-sub">Scheduled on grounds</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Gear Checked Out</span>
+        <div class="metric-value">{{ (cricketer_data.counts or {}).active_gear_count or 0 }}</div>
+        <span class="metric-sub">Items currently in hand</span>
+    </div>
+
+    <div class="metric-card">
+        <span class="metric-label">Pending Invoices</span>
+        <div
+            class="metric-value {% if (cricketer_data.counts or {}).get('pending_dues', 0) > 0 %}text-danger{% else %}text-success{% endif %}">
+            ₹{{ "{:,.0f}".format((cricketer_data.counts or {}).get('pending_dues', 0) or 0) }}
+        </div>
+        <span class="metric-sub">
+            {% if ((cricketer_data.counts or {}).pending_dues or 0) > 0 %}Dues awaiting settlement{% else %}All fees
+            cleared{% endif %}
+        </span>
+    </div>
+</div>
+
+<div class="dashboard-actions-strip">
+    <span style="font-weight: 600; color: var(--color-primary-dark); font-size: 0.9rem;">Player Actions:</span>
+    <a href="{{ url_for('programs') }}" class="btn btn-sm btn-primary btn-pill">📋 Apply for a Program</a>
+    <a href="{{ url_for('sessions') }}" class="btn btn-sm btn-secondary btn-pill">⏱️ View My Schedule</a>
+    <a href="{{ url_for('participation') }}" class="btn btn-sm btn-secondary btn-pill">📅 Attendance History</a>
+    <a href="{{ url_for('equipment_issues') }}" class="btn btn-sm btn-secondary btn-pill">🔄 My Equipment</a>
+    <a href="{{ url_for('payments') }}" class="btn btn-sm btn-secondary btn-pill">💳 My Invoices</a>
+</div>
+
+<div class="two-col-grid">
+    <!-- Player's Scheduled Training Sessions -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">⏱️ My Training Schedule</h2>
+            <a href="{{ url_for('sessions') }}" class="btn btn-sm btn-secondary btn-pill">View All</a>
+        </div>
+        {% if cricketer_data.my_sessions %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Coach</th>
+                        <th>Ground / Venue</th>
+                        <th>My Attendance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in cricketer_data.my_sessions %}
+                    <tr>
+                        <td>
+                            <strong>{{ s.session_date.strftime('%d-%b-%Y') if s.session_date and s.session_date.strftime
+                                is defined else s.session_date }}</strong><br>
+                            <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ s.session_time }}</span>
+                        </td>
+                        <td>{{ s.trainer_name }}</td>
+                        <td>{{ s.venu_name }}</td>
+                        <td>
+                            {% if s.attendance == 'Present' %}
+                            <span class="badge badge-paid">Present</span>
+                            {% elif s.attendance == 'Absent' %}
+                            <span class="badge badge-failed">Absent</span>
+                            {% else %}
+                            <span class="badge badge-scheduled">Scheduled</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">⏱️</div>
+            <div class="empty-state-title">No Scheduled Sessions</div>
+            <p>You have not been assigned to any upcoming training sessions yet.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Player's Applications and Status -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📝 My Program Applications</h2>
+            <a href="{{ url_for('programs') }}" class="btn btn-sm btn-secondary btn-pill">Enroll in Program</a>
+        </div>
+        {% if cricketer_data.my_applications %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Program</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in cricketer_data.my_applications %}
+                    <tr>
+                        <td><strong>{{ a.program_name }}</strong></td>
+                        <td>{{ a.duration }}</td>
+                        <td>
+                            <span class="badge badge-{{ a.applied_status|lower }}">{{ a.applied_status }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <div class="empty-state-title">No Program Applications</div>
+            <p>Explore available academy curriculums and apply today!</p>
+            <a href="{{ url_for('programs') }}" class="btn btn-sm btn-primary btn-pill" style="margin-top: 10px;">Browse
+                Programs</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="card" style="padding: 36px; text-align: center; margin-top: 24px;">
+    <h2 class="card-title" style="margin-bottom: 12px;">Welcome to Crickethub</h2>
+    <p style="color: var(--color-text-muted); max-width: 600px; margin: 0 auto 20px auto;">
+        Your account profile is active. Use the navigation bar above to view programs, schedules, and training sessions.
+    </p>
+    <a href="{{ url_for('programs') }}" class="btn btn-primary btn-pill">Browse Training Programs</a>
+</div>
+{% endif %}
+{% endblock %}

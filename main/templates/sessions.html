@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Training Sessions{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">⏱️ Training Sessions (TRAINING_SESSION)</h1>
+        <p class="page-subtitle">Schedule, assign coaches, allocate grounds, and monitor session status.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" onclick="openModal('addSessionModal')">
+            + Schedule New Session
+        </button>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('sessions') }}" class="search-form">
+        <input type="text" name="search" class="form-control" placeholder="Search by coach or venue..." value="{{ search or '' }}">
+        <select name="status" class="form-control" style="max-width: 160px;" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="Scheduled" {% if status_filter == 'Scheduled' %}selected{% endif %}>Scheduled</option>
+            <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
+            <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search or status_filter %}
+        <a href="{{ url_for('sessions') }}" class="btn btn-secondary" title="Clear Filters">&times;</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Sessions Table -->
+{% if sessions %}
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Date &amp; Time</th>
+                <th>Coach / Trainer</th>
+                <th>Ground / Venue</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sessions %}
+            <tr>
+                <td><strong>#{{ s.session_id }}</strong></td>
+                <td>
+                    <strong>{{ s.session_date.strftime('%d-%b-%Y') if s.session_date.strftime is defined else s.session_date }}</strong><br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ s.session_time }}</span>
+                </td>
+                <td>
+                    <strong>{{ s.trainer_name }}</strong><br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ s.specialization or '' }}</span>
+                </td>
+                <td>
+                    <strong>{{ s.venu_name }}</strong><br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ s.venue_location or '' }}</span>
+                </td>
+                <td><span class="badge badge-{{ s.status|lower }}">{{ s.status }}</span></td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <a href="{{ url_for('participation') }}?session_id={{ s.session_id }}" class="btn btn-sm btn-gold" title="Record Player Attendance">Roster</a>
+
+                    <button type="button" class="btn btn-sm btn-secondary" onclick='populateEditModal("editSessionModal", {
+                        "session_id": "{{ s.session_id }}",
+                        "session_date": "{{ s.session_date.strftime("%Y-%m-%d") if s.session_date.strftime is defined else s.session_date }}",
+                        "session_time": "{{ s.session_time }}",
+                        "status": "{{ s.status }}",
+                        "trainer_id": "{{ s.trainer_id }}",
+                        "venu_id": "{{ s.venu_id }}"
+                    })'>Edit</button>
+
+                    <form method="POST" action="{{ url_for('sessions') }}" style="display: inline;" data-confirm="Cancel/Delete session #{{ s.session_id }}?">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="session_id" value="{{ s.session_id }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <div class="empty-state-icon">⏱️</div>
+    <div class="empty-state-title">No Training Sessions Found</div>
+    <p>Schedule a session using the button above.</p>
+</div>
+{% endif %}
+
+<!-- Add Session Modal -->
+<div class="modal-overlay" id="addSessionModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Schedule Training Session</h2>
+            <button type="button" class="modal-close" onclick="closeModal('addSessionModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('sessions') }}">
+            <input type="hidden" name="action" value="create">
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Session Date *</label>
+                        <input type="date" name="session_date" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Session Time Slot *</label>
+                        <input type="text" name="session_time" class="form-control" placeholder="e.g. 06:30 AM - 08:30 AM" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Assigned Coach / Trainer *</label>
+                    <select name="trainer_id" class="form-control" required>
+                        {% for t in trainers %}
+                        <option value="{{ t.trainer_id }}">{{ t.name }} ({{ t.specialization or 'Coach' }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Training Ground / Venue *</label>
+                    <select name="venu_id" class="form-control" required>
+                        {% for v in venues %}
+                        <option value="{{ v.venu_id }}">{{ v.venu_name }} &bull; {{ v.location }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-control">
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addSessionModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Schedule Session</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Session Modal -->
+<div class="modal-overlay" id="editSessionModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Edit Session Details</h2>
+            <button type="button" class="modal-close" onclick="closeModal('editSessionModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('sessions') }}">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="session_id">
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Session Date *</label>
+                        <input type="date" name="session_date" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Session Time Slot *</label>
+                        <input type="text" name="session_time" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Assigned Coach / Trainer *</label>
+                    <select name="trainer_id" class="form-control" required>
+                        {% for t in trainers %}
+                        <option value="{{ t.trainer_id }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Training Ground / Venue *</label>
+                    <select name="venu_id" class="form-control" required>
+                        {% for v in venues %}
+                        <option value="{{ v.venu_id }}">{{ v.venu_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-control">
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editSessionModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Session</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

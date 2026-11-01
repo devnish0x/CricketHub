@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Academy Grounds &amp; Venues{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">🏟️ Grounds &amp; Venues (VENUE)</h1>
+        <p class="page-subtitle">Manage cricket pitches, practice nets, indoor centers, and ground availability.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" onclick="openModal('addVenueModal')">
+            + Add New Venue
+        </button>
+    </div>
+</div>
+
+<!-- Search Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('venues') }}" class="search-form">
+        <input type="text" name="search" class="form-control" placeholder="Search by venue name or campus location..." value="{{ search or '' }}">
+        <button type="submit" class="btn btn-secondary">Search</button>
+        {% if search %}
+        <a href="{{ url_for('venues') }}" class="btn btn-secondary" title="Clear Search">&times;</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Venues Table -->
+{% if venues %}
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Ground / Facility Name</th>
+                <th>Location</th>
+                <th>Capacity</th>
+                <th>Availability</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in venues %}
+            <tr>
+                <td><strong>#{{ v.venu_id }}</strong></td>
+                <td><strong>{{ v.venu_name }}</strong></td>
+                <td>{{ v.location }}</td>
+                <td>{{ v.capacity }} Players</td>
+                <td><span class="badge badge-{{ v.availability|lower }}">{{ v.availability }}</span></td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick='populateEditModal("editVenueModal", {
+                        "venu_id": "{{ v.venu_id }}",
+                        "venu_name": "{{ v.venu_name }}",
+                        "location": "{{ v.location }}",
+                        "capacity": "{{ v.capacity }}",
+                        "availability": "{{ v.availability }}"
+                    })'>Edit</button>
+
+                    <form method="POST" action="{{ url_for('venues') }}" style="display: inline;" data-confirm="Delete venue #{{ v.venu_id }}? Linked sessions will also be deleted.">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="venu_id" value="{{ v.venu_id }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <div class="empty-state-icon">🏟️</div>
+    <div class="empty-state-title">No Venues Found</div>
+    <p>Register training grounds or practice nets above.</p>
+</div>
+{% endif %}
+
+<!-- Add Venue Modal -->
+<div class="modal-overlay" id="addVenueModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Register Academy Venue</h2>
+            <button type="button" class="modal-close" onclick="closeModal('addVenueModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('venues') }}">
+            <input type="hidden" name="action" value="create">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Venue / Ground Name *</label>
+                    <input type="text" name="venu_name" class="form-control" required placeholder="e.g. End Point Turf Oval">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Location / Address *</label>
+                    <input type="text" name="location" class="form-control" required placeholder="e.g. MIT Manipal North Ground">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Player Capacity *</label>
+                        <input type="number" name="capacity" class="form-control" value="30" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Availability Status</label>
+                        <select name="availability" class="form-control">
+                            <option value="Available">Available</option>
+                            <option value="Unavailable">Unavailable</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addVenueModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Venue</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Venue Modal -->
+<div class="modal-overlay" id="editVenueModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Edit Venue Information</h2>
+            <button type="button" class="modal-close" onclick="closeModal('editVenueModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('venues') }}">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="venu_id">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Venue / Ground Name *</label>
+                    <input type="text" name="venu_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Location *</label>
+                    <input type="text" name="location" class="form-control" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Capacity *</label>
+                        <input type="number" name="capacity" class="form-control" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Availability</label>
+                        <select name="availability" class="form-control">
+                            <option value="Available">Available</option>
+                            <option value="Unavailable">Unavailable</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editVenueModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

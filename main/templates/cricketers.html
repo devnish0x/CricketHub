@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Cricketers Directory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">🏏 Cricketers Directory (CRICKETER)</h1>
+        <p class="page-subtitle">Track player profiles, styles, experience, and contact information.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" onclick="openModal('addCricketerModal')">
+            + Register Cricketer
+        </button>
+    </div>
+</div>
+
+<!-- Search Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('cricketers') }}" class="search-form">
+        <input type="text" name="search" class="form-control" placeholder="Search by name, batting or bowling style..." value="{{ search or '' }}">
+        <button type="submit" class="btn btn-secondary">Search</button>
+        {% if search %}
+        <a href="{{ url_for('cricketers') }}" class="btn btn-secondary" title="Clear Search">&times;</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Cricketers Table -->
+{% if cricketers %}
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Player Name</th>
+                <th>DOB & Gender</th>
+                <th>Batting Style</th>
+                <th>Bowling Style</th>
+                <th>Experience</th>
+                <th>Contact</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in cricketers %}
+            <tr>
+                <td><strong>#{{ c.cricketer_id }}</strong></td>
+                <td>
+                    <strong>{{ c.name }}</strong><br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">User #{{ c.user_id }}</span>
+                </td>
+                <td>
+                    {{ c.dob.strftime('%d-%b-%Y') if c.dob.strftime is defined else c.dob }}<br>
+                    <span style="font-size: 0.82rem; color: var(--color-text-muted);">{{ c.gender }}</span>
+                </td>
+                <td>{{ c.batting_style or '—' }}</td>
+                <td>{{ c.bowling_style or '—' }}</td>
+                <td>{{ c.experience }} Yrs</td>
+                <td>
+                    {{ c.phone or '—' }}<br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ c.address or '' }}</span>
+                </td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick='populateEditModal("editCricketerModal", {
+                        "cricketer_id": "{{ c.cricketer_id }}",
+                        "name": "{{ c.name }}",
+                        "phone": "{{ c.phone or '' }}",
+                        "address": "{{ c.address or '' }}",
+                        "dob": "{{ c.dob.strftime("%Y-%m-%d") if c.dob.strftime is defined else c.dob }}",
+                        "gender": "{{ c.gender }}",
+                        "batting_style": "{{ c.batting_style or '' }}",
+                        "bowling_style": "{{ c.bowling_style or '' }}",
+                        "experience": "{{ c.experience }}"
+                    })'>Edit</button>
+
+                    <form method="POST" action="{{ url_for('cricketers') }}" style="display: inline;" data-confirm="Delete cricketer #{{ c.cricketer_id }} and player user record?">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="cricketer_id" value="{{ c.cricketer_id }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <div class="empty-state-icon">🏏</div>
+    <div class="empty-state-title">No Cricketers Found</div>
+    <p>Register a new cricketer using the button above.</p>
+</div>
+{% endif %}
+
+<!-- Add Cricketer Modal -->
+<div class="modal-overlay" id="addCricketerModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Register New Cricketer</h2>
+            <button type="button" class="modal-close" onclick="closeModal('addCricketerModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('cricketers') }}">
+            <input type="hidden" name="action" value="create">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" name="name" class="form-control" required placeholder="e.g. Jasprit Bumrah">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Date of Birth *</label>
+                        <input type="date" name="dob" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gender *</label>
+                        <select name="gender" class="form-control" required>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Batting-Style</label>
+                        <select name="batting_style" class="form-control">
+                            <option value="Right Hand Bat">Right Hand Bat</option>
+                            <option value="Left Hand Bat">Left Hand Bat</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bowling-Style</label>
+                        <input type="text" name="bowling_style" class="form-control" placeholder="e.g. Right Arm Fast">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Experience (Years)</label>
+                        <input type="number" name="experience" class="form-control" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contact Phone</label>
+                        <input type="text" name="phone" class="form-control" placeholder="10-digit number">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Initial Password</label>
+                    <input type="password" name="password" class="form-control" value="password123">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Residential Address</label>
+                    <textarea name="address" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addCricketerModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Enroll Cricketer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Cricketer Modal -->
+<div class="modal-overlay" id="editCricketerModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Edit Cricketer Profile</h2>
+            <button type="button" class="modal-close" onclick="closeModal('editCricketerModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('cricketers') }}">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="cricketer_id">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Date of Birth</label>
+                        <input type="date" name="dob" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <select name="gender" class="form-control">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Batting-Style</label>
+                        <select name="batting_style" class="form-control">
+                            <option value="Right Hand Bat">Right Hand Bat</option>
+                            <option value="Left Hand Bat">Left Hand Bat</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bowling-Style</label>
+                        <input type="text" name="bowling_style" class="form-control">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Experience (Years)</label>
+                        <input type="number" name="experience" class="form-control" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contact Phone</label>
+                        <input type="text" name="phone" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Residential Address</label>
+                    <textarea name="address" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editCricketerModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Profile</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

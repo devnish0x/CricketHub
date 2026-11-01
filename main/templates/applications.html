@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Program Applications{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📝 Program Applications (APPLIED_TO)</h1>
+        <p class="page-subtitle">Review cricketer enrollments, pending admissions, and approval workflows.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" onclick="openModal('addApplicationModal')">
+            + New Program Application
+        </button>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('applications') }}" class="search-form">
+        <input type="text" name="search" class="form-control" placeholder="Search by cricketer or program..." value="{{ search or '' }}">
+        <select name="status" class="form-control" style="max-width: 160px;" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+            <option value="Approved" {% if status_filter == 'Approved' %}selected{% endif %}>Approved</option>
+            <option value="Rejected" {% if status_filter == 'Rejected' %}selected{% endif %}>Rejected</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search or status_filter %}
+        <a href="{{ url_for('applications') }}" class="btn btn-secondary" title="Clear Filters">&times;</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Applications Table -->
+{% if applications %}
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Cricketer Name</th>
+                <th>Program Applied For</th>
+                <th>Duration</th>
+                <th>Submission Date</th>
+                <th>Application Status</th>
+                <th style="text-align: right;">Review Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in applications %}
+            <tr>
+                <td>
+                    <strong>{{ a.cricketer_name }}</strong><br>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ a.cricketer_phone or 'No phone' }}</span>
+                </td>
+                <td><strong>{{ a.program_name }}</strong></td>
+                <td>{{ a.duration }}</td>
+                <td>{{ a.applied_date.strftime('%d-%b-%Y') if a.applied_date.strftime is defined else a.applied_date }}</td>
+                <td><span class="badge badge-{{ a.applied_status|lower }}">{{ a.applied_status }}</span></td>
+                <td style="text-align: right; white-space: nowrap;">
+                    {% if a.applied_status == 'Pending' %}
+                    <form method="POST" action="{{ url_for('applications') }}" style="display: inline;">
+                        <input type="hidden" name="action" value="update_status">
+                        <input type="hidden" name="cricketer_id" value="{{ a.cricketer_id }}">
+                        <input type="hidden" name="program_id" value="{{ a.program_id }}">
+                        <input type="hidden" name="applied_status" value="Approved">
+                        <button type="submit" class="btn btn-sm btn-primary">Approve</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('applications') }}" style="display: inline;">
+                        <input type="hidden" name="action" value="update_status">
+                        <input type="hidden" name="cricketer_id" value="{{ a.cricketer_id }}">
+                        <input type="hidden" name="program_id" value="{{ a.program_id }}">
+                        <input type="hidden" name="applied_status" value="Rejected">
+                        <button type="submit" class="btn btn-sm btn-secondary">Reject</button>
+                    </form>
+                    {% endif %}
+
+                    <form method="POST" action="{{ url_for('applications') }}" style="display: inline;" data-confirm="Delete application record?">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="cricketer_id" value="{{ a.cricketer_id }}">
+                        <input type="hidden" name="program_id" value="{{ a.program_id }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <div class="empty-state-icon">📝</div>
+    <div class="empty-state-title">No Applications Found</div>
+    <p>Submit a cricketer application using the button above.</p>
+</div>
+{% endif %}
+
+<!-- Add Application Modal -->
+<div class="modal-overlay" id="addApplicationModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Submit Program Application</h2>
+            <button type="button" class="modal-close" onclick="closeModal('addApplicationModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('applications') }}">
+            <input type="hidden" name="action" value="apply">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Cricketer *</label>
+                    <select name="cricketer_id" class="form-control" required>
+                        {% for c in cricketers %}
+                        <option value="{{ c.cricketer_id }}">{{ c.name }} (#{{ c.cricketer_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cricket Program *</label>
+                    <select name="program_id" class="form-control" required>
+                        {% for p in programs %}
+                        <option value="{{ p.program_id }}">{{ p.program_name }} ({{ p.duration }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addApplicationModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Submit Application</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

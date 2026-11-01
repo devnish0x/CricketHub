@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Cricket Training Programs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📋 Cricket Programs (CRICKET_PROGRAM)</h1>
+        <p class="page-subtitle">Configure structured coaching curriculums, specialty clinics, and courses.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" onclick="openModal('addProgramModal')">
+            + Create New Program
+        </button>
+    </div>
+</div>
+
+<!-- Search Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('programs') }}" class="search-form">
+        <input type="text" name="search" class="form-control" placeholder="Search by program name or duration..." value="{{ search or '' }}">
+        <button type="submit" class="btn btn-secondary">Search</button>
+        {% if search %}
+        <a href="{{ url_for('programs') }}" class="btn btn-secondary" title="Clear Search">&times;</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Programs Table -->
+{% if programs %}
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Program Curriculum Name</th>
+                <th>Duration</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in programs %}
+            <tr>
+                <td><strong>#{{ p.program_id }}</strong></td>
+                <td><strong>{{ p.program_name }}</strong></td>
+                <td><span class="badge badge-completed">{{ p.duration }}</span></td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick='populateEditModal("editProgramModal", {
+                        "program_id": "{{ p.program_id }}",
+                        "program_name": "{{ p.program_name }}",
+                        "duration": "{{ p.duration }}"
+                    })'>Edit</button>
+
+                    <form method="POST" action="{{ url_for('programs') }}" style="display: inline;" data-confirm="Delete program #{{ p.program_id }}? All related applications and fees will be affected.">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="program_id" value="{{ p.program_id }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <div class="empty-state-icon">📋</div>
+    <div class="empty-state-title">No Programs Registered</div>
+    <p>Create a cricket coaching program using the button above.</p>
+</div>
+{% endif %}
+
+<!-- Add Program Modal -->
+<div class="modal-overlay" id="addProgramModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Create Cricket Training Program</h2>
+            <button type="button" class="modal-close" onclick="closeModal('addProgramModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('programs') }}">
+            <input type="hidden" name="action" value="create">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Program Name *</label>
+                    <input type="text" name="program_name" class="form-control" required placeholder="e.g. Modern Power Hitting & Boundary Clearing">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Duration *</label>
+                    <input type="text" name="duration" class="form-control" required placeholder="e.g. 3 Months, 6 Months, or 4 Weeks">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addProgramModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Program</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Program Modal -->
+<div class="modal-overlay" id="editProgramModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Edit Program Details</h2>
+            <button type="button" class="modal-close" onclick="closeModal('editProgramModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('programs') }}">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="program_id">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Program Name *</label>
+                    <input type="text" name="program_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Duration *</label>
+                    <input type="text" name="duration" class="form-control" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editProgramModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Premier Cricket Training Academy{% endblock %}
+
+{% block content %}
+<!-- Full-Bleed Atmospheric Hero Banner -->
+<section class="hero-container">
+    <div class="hero-image-wrapper">
+        <img src="{{ url_for('static', filename='images/cricket_hero.jpg') }}" alt="Cricket Academy Stadium Pitch" class="hero-image">
+        <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-content">
+        <div class="hero-pill-badge">
+            <span class="badge-dot"></span> Official Cricket Performance System &bull; Powered by Oracle 21c
+        </div>
+        <h1 class="hero-headline">Forge Your Cricket Legacy</h1>
+        <p class="hero-subheadline">
+            Elite coaching, state-of-the-art turf pitches, comprehensive biometric attendance tracking,
+            and complete player equipment management under one unified academy platform.
+        </p>
+        <div class="hero-cta-group">
+            {% if current_user.id %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-gold btn-lg btn-pill hero-cta-btn">
+                <span>Enter Academy Dashboard</span> &rarr;
+            </a>
+            <a href="{{ url_for('reports') }}" class="btn btn-glass btn-lg btn-pill hero-cta-btn">
+                <span>Analytical SQL Reports</span>
+            </a>
+            {% else %}
+            <a href="{{ url_for('register') }}" class="btn btn-gold btn-lg btn-pill hero-cta-btn" id="hero-register-btn">
+                <span>Register as a Player</span> &rarr;
+            </a>
+            <a href="{{ url_for('login') }}" class="btn btn-glass btn-lg btn-pill hero-cta-btn" id="hero-login-btn">
+                <span>Member Sign In</span>
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Real Live Oracle Statistics Pills -->
+        <div class="hero-stats-strip">
+            <div class="hero-stat-item">
+                <span class="hero-stat-number">{{ counts.total_cricketers or 0 }}</span>
+                <span class="hero-stat-desc">Enrolled Cricketers</span>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat-item">
+                <span class="hero-stat-number">{{ counts.total_trainers or 0 }}</span>
+                <span class="hero-stat-desc">Accredited Coaches</span>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat-item">
+                <span class="hero-stat-number">{{ counts.total_programs or 0 }}</span>
+                <span class="hero-stat-desc">Training Curriculums</span>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat-item">
+                <span class="hero-stat-number">{{ counts.available_venues or 0 }}</span>
+                <span class="hero-stat-desc">Match-Ready Grounds</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Academy Features & Core Pillars -->
+<section class="section-padding" id="features">
+    <div class="section-header-center">
+        <span class="section-eyebrow">HIGH PERFORMANCE INFRASTRUCTURE</span>
+        <h2 class="section-title-serif">Engineered for Cricketing Excellence</h2>
+        <p class="section-subtitle">
+            Crickethub connects certified head coaches, rising cricketers, and academy logistics into a unified, secure database platform.
+        </p>
+    </div>
+
+    <div class="feature-cards-grid">
+        <div class="feature-card">
+            <div class="feature-icon-wrapper">🏏</div>
+            <h3 class="feature-title">High-Performance Batting & Bowling</h3>
+            <p class="feature-text">
+                Custom training programs tailored to pace bowling, spin variation, batting stance mechanics, and match temperament.
+            </p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon-wrapper">🏟️</div>
+            <h3 class="feature-title">World-Class Pitch & Venue Logistics</h3>
+            <p class="feature-text">
+                Manage outdoor turf pitches, indoor net complexes, and floodlit grounds with automated capacity and availability scheduling.
+            </p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon-wrapper">📊</div>
+            <h3 class="feature-title">Biometric Attendance Analytics</h3>
+            <p class="feature-text">
+                Session participation tracking backed by real PL/SQL functions to calculate player commitment and readiness percentages.
+            </p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon-wrapper">🛡️</div>
+            <h3 class="feature-title">Equip & Gear Checkout Depot</h3>
+            <p class="feature-text">
+                Track helmets, pads, English willow bats, and bowling machines with real-time stock deductions and issue-return workflows.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Active Cricket Programs Catalog (Backed by Oracle) -->
+<section class="section-padding bg-alt" id="programs">
+    <div class="section-header-split">
+        <div>
+            <span class="section-eyebrow">ACADEMY CURRICULUM</span>
+            <h2 class="section-title-serif">Featured Training Programs</h2>
+        </div>
+        <div>
+            {% if current_user.id %}
+            <a href="{{ url_for('programs') }}" class="btn btn-outline btn-pill">View All Programs &rarr;</a>
+            {% else %}
+            <a href="{{ url_for('register') }}" class="btn btn-outline btn-pill">Apply Now &rarr;</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if programs %}
+    <div class="programs-cards-grid">
+        {% for prog in programs %}
+        <div class="program-card">
+            <div class="program-badge">Verified Curriculum</div>
+            <h3 class="program-name">{{ prog.program_name }}</h3>
+            <div class="program-duration">
+                <span>⏱️ Duration:</span> <strong>{{ prog.duration }}</strong>
+            </div>
+            <p class="program-desc">
+                Comprehensive coaching syllabus focusing on technical mastery, situational match scenarios, and physical fitness conditioning.
+            </p>
+            <div class="program-card-footer">
+                {% if current_user.role == 'Cricketer' %}
+                <form method="POST" action="{{ url_for('applications') }}">
+                    <input type="hidden" name="action" value="apply">
+                    <input type="hidden" name="program_id" value="{{ prog.program_id }}">
+                    <button type="submit" class="btn btn-sm btn-primary btn-pill">Apply to Program</button>
+                </form>
+                {% elif current_user.id %}
+                <a href="{{ url_for('programs') }}" class="btn btn-sm btn-secondary btn-pill">Program Details</a>
+                {% else %}
+                <a href="{{ url_for('register') }}" class="btn btn-sm btn-primary btn-pill">Join to Apply</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📋</div>
+        <div class="empty-state-title">Programs Updating</div>
+        <p>Curriculum is being prepared by coaching staff in Oracle database.</p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Bottom CTA Banner -->
+<section class="section-padding cta-banner">
+    <div class="container text-center">
+        <h2 class="cta-headline">Ready to Elevate Your Game?</h2>
+        <p class="cta-subtitle">
+            Join Crickethub today. Experience elite coaching, state-of-the-art facilities, and transparent progression tracking.
+        </p>
+        <div style="margin-top: 28px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+            {% if current_user.id %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-gold btn-lg btn-pill">Go to My Dashboard</a>
+            {% else %}
+            <a href="{{ url_for('register') }}" class="btn btn-gold btn-lg btn-pill">Register Player Account</a>
+            <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg btn-pill">Member Login</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+

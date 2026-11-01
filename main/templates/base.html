@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Crickethub - Professional Cricket Training & Academy Management System built with Python Flask and Oracle Database.">
+    <title>{% block title %}Crickethub{% endblock %} | Cricket Training Academy</title>
+    <!-- Google Fonts: Inter & Playfair Display for serif headings -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Top Primary Header -->
+    <header class="site-header">
+        <div class="container nav-wrapper">
+            <a href="{% if current_user.id %}{{ url_for('dashboard') }}{% else %}{{ url_for('landing') }}{% endif %}" class="brand-logo" id="brand-logo">
+                <span class="brand-icon">🏏</span>
+                <span class="brand-text">Cricket<span class="brand-accent">Hub</span></span>
+            </a>
+
+            {% if current_user.id %}
+            <nav class="desktop-nav">
+                <ul class="main-navigation">
+                    <li><a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+                    {% if current_user.role in ['Super Admin', 'System User'] %}
+                    <li><a href="{{ url_for('cricketers') }}" class="nav-link {% if request.endpoint in ['cricketers', 'trainers', 'users'] %}active{% endif %}">Academy Members</a></li>
+                    <li><a href="{{ url_for('sessions') }}" class="nav-link {% if request.endpoint in ['programs', 'venues', 'sessions'] %}active{% endif %}">Sessions & Grounds</a></li>
+                    <li><a href="{{ url_for('equipment') }}" class="nav-link {% if request.endpoint in ['equipment', 'payments'] %}active{% endif %}">Inventory & Dues</a></li>
+                    {% elif current_user.role == 'Trainer' %}
+                    <li><a href="{{ url_for('sessions') }}" class="nav-link {% if request.endpoint == 'sessions' %}active{% endif %}">My Sessions</a></li>
+                    <li><a href="{{ url_for('participation') }}" class="nav-link {% if request.endpoint == 'participation' %}active{% endif %}">Attendance</a></li>
+                    <li><a href="{{ url_for('cricketers') }}" class="nav-link {% if request.endpoint == 'cricketers' %}active{% endif %}">Trainees</a></li>
+                    {% elif current_user.role == 'Cricketer' %}
+                    <li><a href="{{ url_for('sessions') }}" class="nav-link {% if request.endpoint == 'sessions' %}active{% endif %}">My Schedule</a></li>
+                    <li><a href="{{ url_for('applications') }}" class="nav-link {% if request.endpoint == 'applications' %}active{% endif %}">Applications</a></li>
+                    <li><a href="{{ url_for('participation') }}" class="nav-link {% if request.endpoint == 'participation' %}active{% endif %}">Attendance</a></li>
+                    <li><a href="{{ url_for('payments') }}" class="nav-link {% if request.endpoint == 'payments' %}active{% endif %}">My Dues</a></li>
+                    {% endif %}
+                    <li><a href="{{ url_for('reports') }}" class="nav-link {% if request.endpoint == 'reports' %}active{% endif %}">📊 Analytical Reports</a></li>
+                </ul>
+            </nav>
+
+            <div class="nav-user-panel">
+                <div class="user-badge" id="user-badge">
+                    <span class="user-name">{{ current_user.name }}</span>
+                    <span class="user-role-tag role-{{ current_user.role|lower|replace(' ', '-') }}">{{ current_user.role }}</span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-light btn-pill" id="logout-btn" title="Sign Out">Sign Out</a>
+            </div>
+            {% else %}
+            <div class="nav-guest-actions">
+                <a href="{{ url_for('landing') }}#programs" class="nav-guest-link">Programs</a>
+                <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-light btn-pill" id="nav-login-btn">Sign In</a>
+                <a href="{{ url_for('register') }}" class="btn btn-sm btn-gold btn-pill" id="nav-register-btn">Join Academy</a>
+            </div>
+            {% endif %}
+        </div>
+    </header>
+
+    {% if current_user.id %}
+    <!-- Module Subnavigation Bar (Role-Aware) -->
+    <div class="module-subbar">
+        <div class="container">
+            <nav class="subbar-nav">
+                <a href="{{ url_for('dashboard') }}" class="subbar-link {% if request.endpoint == 'dashboard' %}active{% endif %}">📊 Dashboard</a>
+                
+                {% if current_user.role == 'Super Admin' %}
+                <a href="{{ url_for('users') }}" class="subbar-link {% if request.endpoint == 'users' %}active{% endif %}">👤 User Accounts</a>
+                <a href="{{ url_for('cricketers') }}" class="subbar-link {% if request.endpoint == 'cricketers' %}active{% endif %}">🏏 Cricketers</a>
+                <a href="{{ url_for('trainers') }}" class="subbar-link {% if request.endpoint == 'trainers' %}active{% endif %}">🧢 Trainers</a>
+                <a href="{{ url_for('programs') }}" class="subbar-link {% if request.endpoint == 'programs' %}active{% endif %}">📋 Programs</a>
+                <a href="{{ url_for('venues') }}" class="subbar-link {% if request.endpoint == 'venues' %}active{% endif %}">🏟️ Venues</a>
+                <a href="{{ url_for('sessions') }}" class="subbar-link {% if request.endpoint == 'sessions' %}active{% endif %}">⏱️ Sessions</a>
+                <a href="{{ url_for('equipment') }}" class="subbar-link {% if request.endpoint == 'equipment' %}active{% endif %}">📦 Inventory</a>
+                <a href="{{ url_for('payments') }}" class="subbar-link {% if request.endpoint == 'payments' %}active{% endif %}">💳 Payments</a>
+                <a href="{{ url_for('applications') }}" class="subbar-link {% if request.endpoint == 'applications' %}active{% endif %}">📝 Applications</a>
+                <a href="{{ url_for('equipment_issues') }}" class="subbar-link {% if request.endpoint == 'equipment_issues' %}active{% endif %}">🔄 Gear Checkouts</a>
+                <a href="{{ url_for('participation') }}" class="subbar-link {% if request.endpoint == 'participation' %}active{% endif %}">📅 Attendance</a>
+                <a href="{{ url_for('reports') }}" class="subbar-link {% if request.endpoint == 'reports' %}active{% endif %}">📈 Advanced SQL</a>
+                
+                {% elif current_user.role == 'System User' %}
+                <a href="{{ url_for('cricketers') }}" class="subbar-link {% if request.endpoint == 'cricketers' %}active{% endif %}">🏏 Cricketers</a>
+                <a href="{{ url_for('trainers') }}" class="subbar-link {% if request.endpoint == 'trainers' %}active{% endif %}">🧢 Trainers</a>
+                <a href="{{ url_for('programs') }}" class="subbar-link {% if request.endpoint == 'programs' %}active{% endif %}">📋 Programs</a>
+                <a href="{{ url_for('venues') }}" class="subbar-link {% if request.endpoint == 'venues' %}active{% endif %}">🏟️ Venues</a>
+                <a href="{{ url_for('sessions') }}" class="subbar-link {% if request.endpoint == 'sessions' %}active{% endif %}">⏱️ Sessions</a>
+                <a href="{{ url_for('equipment') }}" class="subbar-link {% if request.endpoint == 'equipment' %}active{% endif %}">📦 Inventory</a>
+                <a href="{{ url_for('payments') }}" class="subbar-link {% if request.endpoint == 'payments' %}active{% endif %}">💳 Invoices</a>
+                <a href="{{ url_for('applications') }}" class="subbar-link {% if request.endpoint == 'applications' %}active{% endif %}">📝 Applications</a>
+                <a href="{{ url_for('equipment_issues') }}" class="subbar-link {% if request.endpoint == 'equipment_issues' %}active{% endif %}">🔄 Gear Checkouts</a>
+                <a href="{{ url_for('participation') }}" class="subbar-link {% if request.endpoint == 'participation' %}active{% endif %}">📅 Attendance</a>
+                <a href="{{ url_for('reports') }}" class="subbar-link {% if request.endpoint == 'reports' %}active{% endif %}">📈 Advanced SQL</a>
+
+                {% elif current_user.role == 'Trainer' %}
+                <a href="{{ url_for('sessions') }}" class="subbar-link {% if request.endpoint == 'sessions' %}active{% endif %}">⏱️ Assigned Sessions</a>
+                <a href="{{ url_for('participation') }}" class="subbar-link {% if request.endpoint == 'participation' %}active{% endif %}">📅 Attendance Roster</a>
+                <a href="{{ url_for('cricketers') }}" class="subbar-link {% if request.endpoint == 'cricketers' %}active{% endif %}">🏏 Trainee Directory</a>
+                <a href="{{ url_for('programs') }}" class="subbar-link {% if request.endpoint == 'programs' %}active{% endif %}">📋 Curriculum</a>
+                <a href="{{ url_for('reports') }}" class="subbar-link {% if request.endpoint == 'reports' %}active{% endif %}">📈 Attendance Analytics</a>
+
+                {% elif current_user.role == 'Cricketer' %}
+                <a href="{{ url_for('sessions') }}" class="subbar-link {% if request.endpoint == 'sessions' %}active{% endif %}">⏱️ My Sessions</a>
+                <a href="{{ url_for('applications') }}" class="subbar-link {% if request.endpoint == 'applications' %}active{% endif %}">📝 My Applications</a>
+                <a href="{{ url_for('participation') }}" class="subbar-link {% if request.endpoint == 'participation' %}active{% endif %}">📅 My Attendance</a>
+                <a href="{{ url_for('equipment_issues') }}" class="subbar-link {% if request.endpoint == 'equipment_issues' %}active{% endif %}">🔄 My Gear</a>
+                <a href="{{ url_for('payments') }}" class="subbar-link {% if request.endpoint == 'payments' %}active{% endif %}">💳 My Invoices</a>
+                <a href="{{ url_for('programs') }}" class="subbar-link {% if request.endpoint == 'programs' %}active{% endif %}">📋 Training Catalog</a>
+                <a href="{{ url_for('reports') }}" class="subbar-link {% if request.endpoint == 'reports' %}active{% endif %}">📈 Academy Metrics</a>
+                {% endif %}
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Flash Message Alerts -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="alert-container">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <span>{{ message }}</span>
+                        <button type="button" class="alert-close" onclick="this.parentElement.remove()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:inherit;">&times;</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="container footer-content">
+            <div>
+                <span class="brand-text">Cricket<span class="brand-accent">Hub</span></span> &copy; {{ now.year }} &mdash; Professional Cricket Training Management System
+            </div>
+            <div style="font-size: 0.82rem; color: #a0b5a8;">
+                Built with Python 3.10 Flask &bull; Oracle Database 21c XE &bull; Coursework Project
+            </div>
+        </div>
+    </footer>
+
+    <!-- Main Interactive Script -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
